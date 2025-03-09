@@ -52,7 +52,7 @@ with st.form("parametres"):
         st.header("Location")
         loyer = st.number_input("Loyer mensuel (€)", value=st.session_state.loyer)
         charges = st.number_input(
-            "Charges annuelles (€, TF, FC, assurances PNO-GLI)",
+            "Charges annuelles (€, TF, FC, gestion, assurances PNO-GLI)",
             value=st.session_state.charges,
         )
         aug_loyer = st.number_input(
@@ -82,7 +82,6 @@ if submitted:
     st.session_state.loyer = loyer
     st.session_state.charges = charges
     st.session_state.aug_loyer = aug_loyer
-    st.session_state.mode_revente = mode_revente
 
     st.session_state.simulation = initialiser_simulation(
         prix_bien,
