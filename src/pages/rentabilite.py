@@ -31,7 +31,7 @@ st.write(
 
 df = simulation.tableau_cashflow()
 
-fig = px.line(df, x="Année", y="Cash Flow (€/an)", title="Évolution du Cashflow")
+fig = px.line(df, x="Année", y="Cashflow (€)", title="Évolution du Cashflow")
 st.plotly_chart(fig)
 
 st.write("### Détail du cashflow annuel")

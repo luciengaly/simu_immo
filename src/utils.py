@@ -2,9 +2,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-import pyxirr
-
-
 import pandas as pd
 
 
@@ -14,8 +11,19 @@ class Emprunt:
         self.duree = duree * 12
         self.taux = taux / 100 / 12
         self.mensualite = self.calcul_mensualite()
+        self.annuite = self.calcul_annuite()
+        self.total_mensualites = self.calcul_total_mensualites()
+        self.total_interets = self.calcul_total_interets()
+        self.tableau_amort_mensuel = self.calcul_tableau_amort_mensuel()
+        self.tableau_amort_annuel = self.calcul_tableau_amort_annuel()
 
-    def annuite(self):
+    def calcul_total_mensualites(self):
+        return self.mensualite * self.duree
+
+    def calcul_total_interets(self):
+        return self.total_mensualites - self.montant
+
+    def calcul_annuite(self):
         return self.mensualite * 12
 
     def calcul_mensualite(self):
@@ -23,7 +31,7 @@ class Emprunt:
             return self.montant * self.taux / (1 - (1 + self.taux) ** -self.duree)
         return self.montant / self.duree
 
-    def tableau_amortissement(self):
+    def calcul_tableau_amort_mensuel(self):
         capital_restant = self.montant
         tableau = []
 
@@ -44,46 +52,8 @@ class Emprunt:
 
         return pd.DataFrame(tableau)
 
-    def graphique_amortissement(self, df, periodicite):
-        fig_annuel = go.Figure()
-
-        fig_annuel.add_trace(
-            go.Bar(
-                x=df[periodicite],
-                y=df["Part intérêts (€)"],
-                name="Intérêts",
-                marker_color="indianred",
-            )
-        )
-
-        fig_annuel.add_trace(
-            go.Bar(
-                x=df[periodicite],
-                y=df["Part capital (€)"],
-                name="Capital remboursé",
-                marker_color="seagreen",
-            )
-        )
-
-        fig_annuel.update_layout(
-            barmode="stack",
-            title="Répartition du capital restant dû",
-            xaxis_title=periodicite,
-            yaxis_title="Montant (€)",
-        )
-
-        return fig_annuel
-
-    def graphique_amortissement_annuel(self, df):
-        fig_annuel = self.graphique_amortissement(df, "Année")
-        return fig_annuel
-
-    def graphique_amortissement_mensuel(self, df):
-        fig_mensuel = self.graphique_amortissement(df, "Mois")
-        return fig_mensuel
-
-    def tableau_amortissement_annuel(self):
-        tableau = self.tableau_amortissement()
+    def calcul_tableau_amort_annuel(self):
+        tableau = self.tableau_amort_mensuel.copy()
         tableau["Année"] = np.ceil(tableau["Mois"] / 12).astype(int)
 
         annuel = (
@@ -93,6 +63,7 @@ class Emprunt:
             .sum()
             .reset_index()
         )
+        annuel.rename({"Mensualité (€)": "Annuité (€)"}, axis=1, inplace=True)
 
         annuel["Capital restant dû (€)"] = (
             tableau.groupby("Année")["Capital restant dû (€)"].last().values
@@ -100,31 +71,149 @@ class Emprunt:
 
         return annuel
 
+    def graphique_amortissement(self, df, periodicite):
+        fig = go.Figure()
 
-class Amortissement:
-    def __init__(self, bien, travaux, meubles, duree_bien=20, duree_meubles=10):
-        self.amortissement_bien = (bien + travaux) / duree_bien
-        self.amortissement_meubles = meubles / duree_meubles
+        fig.add_trace(
+            go.Bar(
+                x=df[periodicite],
+                y=df["Part intérêts (€)"],
+                name="Intérêts",
+                marker_color="indianred",
+            )
+        )
 
-    def total(self):
-        return self.amortissement_bien + self.amortissement_meubles
+        fig.add_trace(
+            go.Bar(
+                x=df[periodicite],
+                y=df["Part capital (€)"],
+                name="Capital remboursé",
+                marker_color="seagreen",
+            )
+        )
+
+        fig.update_layout(
+            barmode="stack",
+            title="Répartition du capital restant dû",
+            xaxis_title=periodicite,
+            yaxis_title="Montant (€)",
+        )
+
+        return fig
+
+    def graphique_amort_annuel(self):
+        fig = self.graphique_amortissement(self.tableau_amort_annuel, "Année")
+        return fig
+
+    def graphique_amort_mensuel(self):
+        fig = self.graphique_amortissement(self.tableau_amort_mensuel, "Mois")
+        return fig
 
 
 class Location:
-    def __init__(self, loyer, charges, aug_loyer):
+    def __init__(self, loyer, charges, aug_loyer, duree=20):
         self.loyer = loyer
         self.charges = charges
         self.aug_loyer = aug_loyer
-        self.loyer_annuel = loyer * 12
+        self.duree = duree
 
-    def calcul_loyer_annuel(self, duree):
+        self.bilan_annuel = self.calcul_tableau_bilan_annuel(duree)
+
+    def calcul_tableau_bilan_annuel(self, duree):
         loyer_annuel = self.loyer * 12
-        data = [[1, loyer_annuel]]
+        data = [[1, loyer_annuel, self.charges]]
         for annee in range(2, duree + 1):
             loyer_annuel *= 1 + self.aug_loyer / 100
-            data.append([annee, loyer_annuel])
+            data.append([annee, loyer_annuel, self.charges])
 
-        return pd.DataFrame(data, columns=["Année", "Loyer annuel (€)"])
+        return pd.DataFrame(data, columns=["Année", "Revenus (€)", "Dépenses (€)"])
+
+
+class Amortissement:
+    def __init__(self, bien, travaux, meubles, duree_bien=20, duree_meubles=10):
+        self.bien = [(bien + travaux) / duree_bien] * duree_bien
+        self.meubles = [meubles / duree_meubles] * duree_meubles
+        self.total = self.calcul_amort_total()
+
+    def calcul_amort_total(self):
+        max_len = max(len(self.bien), len(self.meubles))
+        total = []
+
+        for i in range(max_len):
+            bien = self.bien[i] if i < len(self.bien) else 0
+            meubles = self.meubles[i] if i < len(self.meubles) else 0
+            total.append(bien + meubles)
+
+        return total
+
+
+class Fiscalite:
+    def __init__(
+        self,
+        prix_bien: float,
+        frais_notaire: float,
+        travaux: float,
+        meubles: float,
+        part_interet: list[float],
+        revenus: list[float],
+        charges: list[float],
+    ):
+        self.prix_bien = prix_bien
+        self.frais_notaire = frais_notaire
+        self.travaux = travaux
+        self.meubles = meubles
+        self.part_interet = part_interet
+        self.revenus = revenus
+        self.charges = charges
+
+        self.amortissement = Amortissement(prix_bien, travaux, meubles)
+        self.deficit_reportable = 0
+        self.tableau_impots = self.calcul_impots_regime_reel()
+
+    def calcul_impots_regime_reel(self, duree=20):
+        data = []
+
+        for annee in range(1, duree + 1):
+            revenus = self.revenus[annee - 1]
+            amortissement = self.amortissement.total[annee - 1]
+            charges = self.charges[annee - 1] + self.part_interet[annee - 1]
+
+            if annee == 1:
+                charges += self.prix_bien * self.frais_notaire / 100
+
+            resultat_fiscal = revenus - amortissement - charges
+
+            if resultat_fiscal < 0:
+                self.deficit_reportable += abs(resultat_fiscal)
+                resultat_fiscal = 0
+            else:
+                if self.deficit_reportable > 0:
+                    compensation = min(resultat_fiscal, self.deficit_reportable)
+                    resultat_fiscal -= compensation
+                    self.deficit_reportable -= compensation
+
+            data.append(
+                [
+                    annee,
+                    round(revenus, 2),
+                    round(charges, 2),
+                    round(amortissement, 2),
+                    round(resultat_fiscal, 2),
+                    round(self.deficit_reportable, 2),
+                ]
+            )
+
+        return pd.DataFrame(
+            data,
+            columns=[
+                "Année",
+                "Revenus (€)",
+                "Charges déductibles (€)",
+                "Amortissements (€)",
+                "Résultat fiscal (€)",
+                "Déficit reportable (€)",
+            ],
+        )
 
 
 class SimulationLMNP:
@@ -157,33 +246,32 @@ class SimulationLMNP:
         )
 
         self.emprunt = Emprunt(montant_emprunte, duree_emprunt, taux_emprunt)
-        self.amortissement = Amortissement(prix_bien, travaux, meubles)
-        self.location = Location(loyer, charges, aug_loyer)
-
-        self.deficit_reportable = 0
-
-    def tableau_cashflow(self, duree=10):
-        annuite = self.emprunt.annuite()
-        loyer_annuel_df = self.location.calcul_loyer_annuel(duree=20)
-        loyer_annuel = loyer_annuel_df.loc[0, "Loyer annuel (€)"]
-        cashflow = loyer_annuel - annuite - self.charges
-        data = [[1, round(loyer_annuel, 2), round(annuite, 2), round(cashflow, 2)]]
-        for annee in range(2, duree + 1):
-            loyer_annuel = loyer_annuel_df.loc[annee - 1, "Loyer annuel (€)"]
-            cashflow = loyer_annuel - annuite - self.charges
-            data.append(
-                [annee, round(loyer_annuel, 2), round(annuite, 2), round(cashflow, 2)]
-            )
-
-        return pd.DataFrame(
-            data,
-            columns=[
-                "Année",
-                "Revenus (€/an)",
-                "Annuité emprunt (€/an)",
-                "Cash Flow (€/an)",
-            ],
+        self.location = Location(loyer, charges, aug_loyer, duree=duree_emprunt)
+        self.fiscalite = Fiscalite(
+            prix_bien,
+            frais_notaire,
+            travaux,
+            meubles,
+            self.emprunt.tableau_amort_annuel["Part intérêts (€)"].values.tolist(),
+            self.location.bilan_annuel["Revenus (€)"].values.tolist(),
+            self.location.bilan_annuel["Dépenses (€)"].values.tolist(),
         )
+
+    def tableau_cashflow(self, duree=20):
+        revenus = self.location.bilan_annuel["Revenus (€)"].values.tolist()
+        charges = self.location.bilan_annuel["Dépenses (€)"].values.tolist()
+        annuite = self.emprunt.annuite
+
+        df = pd.DataFrame(
+            {
+                "Année": range(1, duree + 1),
+                "Revenus (€)": revenus,
+                "Charges (€)": charges,
+                "Annuité (€)": [annuite] * duree,
+            }
+        )
+        df["Cashflow (€)"] = df["Revenus (€)"] - df["Charges (€)"] - df["Annuité (€)"]
+        return df
 
     def rendement_brut(self):
         return (
@@ -206,52 +294,6 @@ class SimulationLMNP:
                 + self.meubles
             )
             * 100
-        )
-
-    def calcul_impots_regime_reel(self, duree=10):
-        annuite = self.emprunt.annuite()
-        amortissement_bien = self.amortissement.amortissement_bien
-        amortissement_meubles = self.amortissement.amortissement_meubles
-        loyer_annuel_df = self.location.calcul_loyer_annuel(duree=20)
-        data = []
-
-        for annee in range(1, duree + 1):
-            charges_deductibles = self.charges + annuite
-            total_amortissements = amortissement_bien + amortissement_meubles
-            charges_totales = charges_deductibles + total_amortissements
-            loyer_annuel = loyer_annuel_df.loc[annee - 1, "Loyer annuel (€)"]
-            resultat_fiscal = loyer_annuel - charges_totales
-
-            if resultat_fiscal < 0:
-                self.deficit_reportable += abs(resultat_fiscal)
-                resultat_fiscal = 0
-            else:
-                if self.deficit_reportable > 0:
-                    compensation = min(resultat_fiscal, self.deficit_reportable)
-                    resultat_fiscal -= compensation
-                    self.deficit_reportable -= compensation
-
-            data.append(
-                [
-                    annee,
-                    round(loyer_annuel, 2),
-                    round(charges_deductibles, 2),
-                    round(total_amortissements, 2),
-                    round(resultat_fiscal, 2),
-                    round(self.deficit_reportable, 2),
-                ]
-            )
-
-        return pd.DataFrame(
-            data,
-            columns=[
-                "Année",
-                "Revenus (€/an)",
-                "Charges déductibles (€/an)",
-                "Amortissements (€/an)",
-                "Résultat fiscal (€/an)",
-                "Déficit reportable (€/an)",
-            ],
         )
 
 
