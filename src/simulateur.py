@@ -7,11 +7,12 @@ st.title("🏠 Simulateur LMNP")
 
 if "prix_bien" not in st.session_state:
     st.session_state.prix_bien = 100000
+    st.session_state.frais_agence = 6
     st.session_state.frais_notaire = 8
     st.session_state.travaux = 0
     st.session_state.meubles = 3000
     st.session_state.apport = 10000
-    st.session_state.taux_emprunt = 3.5
+    st.session_state.taux_emprunt = 3.0
     st.session_state.duree_emprunt = 20
     st.session_state.loyer = 600
     st.session_state.charges = 1500
@@ -28,7 +29,10 @@ with st.form("parametres"):
     with col1:
         st.header("Achat du bien")
         prix_bien = st.number_input(
-            "Prix d'achat du bien (€, FAI)", value=st.session_state.prix_bien
+            "Prix d'achat du bien (€, net vendeur)", value=st.session_state.prix_bien
+        )
+        frais_agence = st.number_input(
+            "Frais d'agence (%)", value=st.session_state.frais_agence
         )
         frais_notaire = st.number_input(
             "Frais de notaire (%)", value=st.session_state.frais_notaire
@@ -74,6 +78,7 @@ with st.form("parametres"):
 if submitted:
     st.session_state.prix_bien = prix_bien
     st.session_state.frais_notaire = frais_notaire
+    st.session_state.frais_agence = frais_agence
     st.session_state.travaux = travaux
     st.session_state.meubles = meubles
     st.session_state.apport = apport
@@ -85,6 +90,7 @@ if submitted:
 
     st.session_state.simulation = initialiser_simulation(
         prix_bien,
+        frais_agence,
         frais_notaire,
         travaux,
         meubles,

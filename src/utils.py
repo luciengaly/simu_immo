@@ -7,7 +7,7 @@ class Emprunt:
     def __init__(self, montant, duree, taux):
         self.montant = montant
         self.duree = duree * 12
-        self.taux = taux / 100 / 12
+        self.taux = taux / 12
         self.mensualite = self.calcul_mensualite()
         self.annuite = self.calcul_annuite()
         self.total_mensualites = self.calcul_total_mensualites()
@@ -121,7 +121,7 @@ class Location:
         loyer_annuel = self.loyer * 12
         data = [[1, loyer_annuel, self.charges]]
         for annee in range(2, duree + 1):
-            loyer_annuel *= 1 + self.aug_loyer / 100
+            loyer_annuel *= 1 + self.aug_loyer
             data.append([annee, loyer_annuel, self.charges])
 
         return pd.DataFrame(data, columns=["Année", "Revenus (€)", "Dépenses (€)"])
@@ -149,6 +149,7 @@ class Fiscalite:
     def __init__(
         self,
         prix_bien: float,
+        frais_agence: float,
         frais_notaire: float,
         travaux: float,
         meubles: float,
@@ -157,6 +158,7 @@ class Fiscalite:
         charges: list[float],
     ):
         self.prix_bien = prix_bien
+        self.frais_agence = frais_agence
         self.frais_notaire = frais_notaire
         self.travaux = travaux
         self.meubles = meubles
@@ -177,7 +179,7 @@ class Fiscalite:
             charges = self.charges[annee - 1] + self.part_interet[annee - 1]
 
             if annee == 1:
-                charges += self.prix_bien * self.frais_notaire / 100
+                charges += self.prix_bien * (self.frais_notaire + self.frais_agence)
 
             resultat_fiscal = revenus - amortissement - charges
 
@@ -218,6 +220,7 @@ class SimulationLMNP:
     def __init__(
         self,
         prix_bien,
+        frais_agence,
         frais_notaire,
         travaux,
         meubles,
@@ -229,25 +232,30 @@ class SimulationLMNP:
         aug_loyer,
     ):
         self.prix_bien = prix_bien
-        self.frais_notaire = frais_notaire
+        self.frais_agence = frais_agence / 100
+        self.frais_notaire = frais_notaire / 100
         self.travaux = travaux
         self.meubles = meubles
         self.apport = apport
-        self.taux_emprunt = taux_emprunt
+        self.taux_emprunt = taux_emprunt / 100
         self.duree_emprunt = duree_emprunt
         self.loyer = loyer
         self.charges = charges
-        self.aug_loyer = aug_loyer
+        self.aug_loyer = aug_loyer / 100
 
         montant_emprunte = (
-            prix_bien * (1 + frais_notaire / 100) + travaux + meubles - apport
+            prix_bien * (1 + self.frais_agence + self.frais_notaire)
+            + travaux
+            + meubles
+            - apport
         )
 
-        self.emprunt = Emprunt(montant_emprunte, duree_emprunt, taux_emprunt)
-        self.location = Location(loyer, charges, aug_loyer, duree=duree_emprunt)
+        self.emprunt = Emprunt(montant_emprunte, duree_emprunt, self.taux_emprunt)
+        self.location = Location(loyer, charges, self.aug_loyer, duree=duree_emprunt)
         self.fiscalite = Fiscalite(
             prix_bien,
-            frais_notaire,
+            self.frais_agence,
+            self.frais_notaire,
             travaux,
             meubles,
             self.emprunt.tableau_amort_annuel["Part intérêts (€)"].values.tolist(),
@@ -276,7 +284,7 @@ class SimulationLMNP:
             self.loyer
             * 12
             / (
-                self.prix_bien * (1 + self.frais_notaire / 100)
+                self.prix_bien * (1 + self.frais_notaire + self.frais_agence)
                 + self.travaux
                 + self.meubles
             )
@@ -287,7 +295,7 @@ class SimulationLMNP:
         return (
             (self.loyer * 12 - self.charges)
             / (
-                self.prix_bien * (1 + self.frais_notaire / 100)
+                self.prix_bien * (1 + self.frais_notaire + self.frais_agence)
                 + self.travaux
                 + self.meubles
             )
@@ -298,6 +306,7 @@ class SimulationLMNP:
 def initialiser_simulation(
     prix_bien,
     frais_notaire,
+    frais_agence,
     travaux,
     meubles,
     apport,
@@ -309,6 +318,7 @@ def initialiser_simulation(
 ):
     return SimulationLMNP(
         prix_bien,
+        frais_agence,
         frais_notaire,
         travaux,
         meubles,
