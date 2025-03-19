@@ -128,8 +128,10 @@ class Location:
 
 
 class Amortissement:
-    def __init__(self, bien, travaux, meubles, duree_bien=20, duree_meubles=10):
-        self.bien = [(bien + travaux) / duree_bien] * duree_bien
+    def __init__(
+        self, bien, travaux, meubles, duree_bien=20, duree_meubles=8, taux_usure=0.8
+    ):
+        self.bien = [(bien + travaux) * taux_usure / duree_bien] * duree_bien
         self.meubles = [meubles / duree_meubles] * duree_meubles
         self.total = self.calcul_amort_total()
 
@@ -171,6 +173,7 @@ class Fiscalite:
         self.tableau_impots = self.calcul_impots_regime_reel()
 
     def calcul_impots_regime_reel(self, duree=20):
+        amortissement_reportable = 0
         data = []
 
         for annee in range(1, duree + 1):
@@ -181,25 +184,45 @@ class Fiscalite:
             if annee == 1:
                 charges += self.prix_bien * (self.frais_notaire + self.frais_agence)
 
-            resultat_fiscal = revenus - amortissement - charges
+            # Calcul du résultat avant déficit reportable et amortissement
+            resultat = revenus - charges
 
-            if resultat_fiscal < 0:
-                self.deficit_reportable += abs(resultat_fiscal)
-                resultat_fiscal = 0
+            # Gestion du déficit reportable
+            if resultat < 0:
+                resultat_fiscal = resultat + self.deficit_reportable
+                self.deficit_reportable += abs(resultat)
+                montant_imposable = 0
+                amortissement_reportable += amortissement
             else:
+                resultat_fiscal = resultat
                 if self.deficit_reportable > 0:
                     compensation = min(resultat_fiscal, self.deficit_reportable)
                     resultat_fiscal -= compensation
                     self.deficit_reportable -= compensation
 
+                # Imputation des amortissements (dans la limite du bénéfice)
+                if resultat_fiscal > 0:
+                    imputation_amort = min(
+                        resultat_fiscal, amortissement + amortissement_reportable
+                    )
+                    resultat_fiscal -= imputation_amort
+                    amortissement_reportable += amortissement - imputation_amort
+                else:
+                    amortissement_reportable += amortissement
+
+                montant_imposable = max(0, resultat_fiscal)
+
             data.append(
                 [
                     annee,
-                    round(revenus, 2),
-                    round(charges, 2),
-                    round(amortissement, 2),
-                    round(resultat_fiscal, 2),
-                    round(self.deficit_reportable, 2),
+                    revenus,
+                    charges,
+                    resultat,
+                    resultat_fiscal,
+                    self.deficit_reportable,
+                    amortissement,
+                    amortissement_reportable,
+                    montant_imposable,
                 ]
             )
 
@@ -209,9 +232,12 @@ class Fiscalite:
                 "Année",
                 "Revenus (€)",
                 "Charges déductibles (€)",
-                "Amortissements (€)",
+                "Résultat (€)",
                 "Résultat fiscal (€)",
                 "Déficit reportable (€)",
+                "Amortissement (€)",
+                "Amortissement reportable (€)",
+                "Montant imposable (€)",
             ],
         )
 
@@ -267,6 +293,9 @@ class SimulationLMNP:
         revenus = self.location.bilan_annuel["Revenus (€)"].values.tolist()
         charges = self.location.bilan_annuel["Dépenses (€)"].values.tolist()
         annuite = self.emprunt.annuite
+        part_capital = self.emprunt.tableau_amort_annuel[
+            "Part capital (€)"
+        ].values.tolist()
 
         df = pd.DataFrame(
             {
@@ -274,9 +303,11 @@ class SimulationLMNP:
                 "Revenus (€)": revenus,
                 "Charges (€)": charges,
                 "Annuité (€)": [annuite] * duree,
+                "Part capital (€)": part_capital,
             }
         )
         df["Cashflow (€)"] = df["Revenus (€)"] - df["Charges (€)"] - df["Annuité (€)"]
+        df["Enrichissement (€)"] = df["Part capital (€)"] + df["Cashflow (€)"]
         return df
 
     def rendement_brut(self):

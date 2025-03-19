@@ -31,8 +31,17 @@ st.write(
 
 df = simulation.tableau_cashflow()
 
+st.write("### Détail du cashflow annuel")
+st.dataframe(df, hide_index=True)
+
 fig = px.line(df, x="Année", y="Cashflow (€)", title="Évolution du Cashflow")
 st.plotly_chart(fig)
 
-st.write("### Détail du cashflow annuel")
-st.dataframe(df, hide_index=True)
+df["Enrichissement cumulé (€)"] = df["Enrichissement (€)"].cumsum()
+fig = px.line(
+    df,
+    x="Année",
+    y="Enrichissement cumulé (€)",
+    title="Évolution de l'enrichissement cumulé",
+)
+st.plotly_chart(fig)

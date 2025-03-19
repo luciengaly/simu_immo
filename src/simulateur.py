@@ -12,11 +12,11 @@ if "prix_bien" not in st.session_state:
     st.session_state.travaux = 0
     st.session_state.meubles = 3000
     st.session_state.apport = 10000
-    st.session_state.taux_emprunt = 3.0
+    st.session_state.taux_emprunt = 3.5
     st.session_state.duree_emprunt = 20
     st.session_state.loyer = 600
     st.session_state.charges = 1500
-    st.session_state.aug_loyer = 3.5
+    st.session_state.aug_loyer = 0.0
     st.session_state.mode_revente = "Valeur d'achat"
     st.session_state.inflation_annuelle = 1
     st.session_state.prix_revente = st.session_state.prix_bien
