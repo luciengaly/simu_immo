@@ -334,7 +334,7 @@ class SimulationLMNP:
         )
 
 
-def initialiser_simulation(
+def launch_simu(
     prix_bien,
     frais_notaire,
     frais_agence,
