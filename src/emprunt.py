@@ -1,7 +1,10 @@
 import streamlit as st
 import plotly.express as px
 
+from utils import display_params
+
 st.title("🏦 Emprunt")
+display_params()
 
 # Récupérer la simulation depuis la session
 simulation = st.session_state.get("simulation")
@@ -32,7 +35,7 @@ with tab_annuel:
     st.plotly_chart(fig_annuel)
 
     # Affichage du tableau d'amortissement annuel
-    st.write("📋 Tableau d'amortissement annuel")
+    st.write("📋 **Tableau d'amortissement annuel**")
     st.dataframe(emprunt.tableau_amort_annuel, hide_index=True)
 
 ### Onglet Mensuel ###
@@ -42,5 +45,5 @@ with tab_mensuel:
     st.plotly_chart(fig_mensuel)
 
     # Affichage du tableau d'amortissement mensuel
-    st.write("📋 Tableau d'amortissement mensuel")
+    st.write("📋 **Tableau d'amortissement mensuel**")
     st.dataframe(emprunt.tableau_amort_mensuel, hide_index=True)

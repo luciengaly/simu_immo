@@ -1,7 +1,10 @@
 import streamlit as st
 import plotly.express as px
 
+from utils import display_params
+
 st.title("📊 Rentabilité")
+display_params()
 
 # Récupération de la simulation depuis la session
 simulation = st.session_state.get("simulation")
@@ -22,16 +25,9 @@ with col1:
 with col2:
     st.metric(label="Rendement Net", value=f"{rendement_net:.2f} %")
 
-st.write(
-    """
-**Rendement brut** = Loyers annuels / Coût total du projet × 100  
-**Rendement net** = (Loyers annuels - charges) / Coût total du projet) × 100
-"""
-)
-
 df = simulation.tableau_cashflow()
 
-st.write("### Détail du cashflow annuel")
+st.write("**Détail du cashflow annuel**")
 st.dataframe(df, hide_index=True)
 
 fig = px.line(df, x="Année", y="Cashflow (€)", title="Évolution du Cashflow")

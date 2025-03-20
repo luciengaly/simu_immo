@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import streamlit as st
 
 
 class Emprunt:
@@ -191,7 +192,7 @@ class Fiscalite:
             if resultat < 0:
                 resultat_fiscal = resultat + self.deficit_reportable
                 self.deficit_reportable += abs(resultat)
-                montant_imposable = 0
+                montant_imposable_reel = 0
                 amortissement_reportable += amortissement
             else:
                 resultat_fiscal = resultat
@@ -210,7 +211,9 @@ class Fiscalite:
                 else:
                     amortissement_reportable += amortissement
 
-                montant_imposable = max(0, resultat_fiscal)
+                montant_imposable_reel = max(0, resultat_fiscal)
+
+            montant_imposable_bic = revenus * 0.50
 
             data.append(
                 [
@@ -222,7 +225,8 @@ class Fiscalite:
                     self.deficit_reportable,
                     amortissement,
                     amortissement_reportable,
-                    montant_imposable,
+                    montant_imposable_reel,
+                    montant_imposable_bic,
                 ]
             )
 
@@ -237,57 +241,53 @@ class Fiscalite:
                 "Déficit reportable (€)",
                 "Amortissement (€)",
                 "Amortissement reportable (€)",
-                "Montant imposable (€)",
+                'Montant imposable régime "réel" (€)',
+                "Montant imposable régime micro-BIC (€)",
             ],
         )
 
 
 class SimulationLMNP:
-    def __init__(
-        self,
-        prix_bien,
-        frais_agence,
-        frais_notaire,
-        travaux,
-        meubles,
-        apport,
-        taux_emprunt,
-        duree_emprunt,
-        loyer,
-        charges,
-        aug_loyer,
-    ):
-        self.prix_bien = prix_bien
-        self.frais_agence = frais_agence / 100
-        self.frais_notaire = frais_notaire / 100
-        self.travaux = travaux
-        self.meubles = meubles
-        self.apport = apport
-        self.taux_emprunt = taux_emprunt / 100
-        self.duree_emprunt = duree_emprunt
-        self.loyer = loyer
-        self.charges = charges
-        self.aug_loyer = aug_loyer / 100
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-        montant_emprunte = (
-            prix_bien * (1 + self.frais_agence + self.frais_notaire)
-            + travaux
-            + meubles
-            - apport
+        self.convert_percent()
+        self.calcul_cout_total()
+        self.calcul_montant_emprunte()
+
+        self.emprunt = Emprunt(
+            self.montant_emprunte, self.duree_emprunt, self.taux_emprunt
         )
-
-        self.emprunt = Emprunt(montant_emprunte, duree_emprunt, self.taux_emprunt)
-        self.location = Location(loyer, charges, self.aug_loyer, duree=duree_emprunt)
+        self.location = Location(
+            self.loyer, self.charges, self.aug_loyer, self.duree_emprunt
+        )
         self.fiscalite = Fiscalite(
-            prix_bien,
+            self.prix_bien,
             self.frais_agence,
             self.frais_notaire,
-            travaux,
-            meubles,
+            self.travaux,
+            self.meubles,
             self.emprunt.tableau_amort_annuel["Part intérêts (€)"].values.tolist(),
             self.location.bilan_annuel["Revenus (€)"].values.tolist(),
             self.location.bilan_annuel["Dépenses (€)"].values.tolist(),
         )
+
+    def calcul_montant_emprunte(self):
+        self.montant_emprunte = self.cout_total - self.apport
+
+    def calcul_cout_total(self):
+        self.cout_total = (
+            self.prix_bien * (1 + self.frais_agence + self.frais_notaire)
+            + self.travaux
+            + self.meubles
+        )
+
+    def convert_percent(self):
+        self.frais_agence /= 100
+        self.frais_notaire /= 100
+        self.taux_emprunt /= 100
+        self.aug_loyer /= 100
 
     def tableau_cashflow(self, duree=20):
         revenus = self.location.bilan_annuel["Revenus (€)"].values.tolist()
@@ -311,52 +311,45 @@ class SimulationLMNP:
         return df
 
     def rendement_brut(self):
-        return (
-            self.loyer
-            * 12
-            / (
-                self.prix_bien * (1 + self.frais_notaire + self.frais_agence)
-                + self.travaux
-                + self.meubles
-            )
-            * 100
-        )
+        return self.loyer * 12 / self.cout_total * 100
 
     def rendement_net(self):
-        return (
-            (self.loyer * 12 - self.charges)
-            / (
-                self.prix_bien * (1 + self.frais_notaire + self.frais_agence)
-                + self.travaux
-                + self.meubles
+        return (self.loyer * 12 - self.charges) / self.cout_total * 100
+
+
+@st.cache_data
+def launch_simu(**kwargs):
+    return SimulationLMNP(**kwargs)
+
+
+def display_params():
+    with st.container(border=True):
+        col1, col2, col3 = st.columns(3)
+
+        # Colonne "Votre Bien"
+        with col1:
+            st.markdown("🏠 **VOTRE BIEN**")
+            montant_total = st.session_state.simulation.montant_total
+            surface = st.session_state.surface
+            travaux = "Avec travaux" if st.session_state.travaux > 0 else "Sans travaux"
+            dpe = st.session_state.dpe
+            st.text(
+                f"Appartement • Toulouse • {surface}m² • DPE {dpe}\n{montant_total:.0f}€ • {travaux}"
             )
-            * 100
-        )
 
+        # Colonne "Location"
+        with col2:
+            loyer_annuel = st.session_state.simulation.loyer * 12
+            charges_annuelles = st.session_state.simulation.charges
+            st.markdown("💰 **LOCATION**")
+            st.text(
+                f"Loyer : {loyer_annuel:.0f}€/an\nCharges : {charges_annuelles:.0f}€/an"
+            )
 
-def launch_simu(
-    prix_bien,
-    frais_notaire,
-    frais_agence,
-    travaux,
-    meubles,
-    apport,
-    taux_emprunt,
-    duree_emprunt,
-    loyer,
-    charges,
-    aug_loyer,
-):
-    return SimulationLMNP(
-        prix_bien,
-        frais_agence,
-        frais_notaire,
-        travaux,
-        meubles,
-        apport,
-        taux_emprunt,
-        duree_emprunt,
-        loyer,
-        charges,
-        aug_loyer,
-    )
+        # Colonne "Crédit"
+        with col3:
+            apport = st.session_state.apport
+            taux = st.session_state.taux_emprunt
+            duree = st.session_state.duree_emprunt
+            st.markdown("🏦 **CRÉDIT**")
+            st.text(f"Taux : {taux:.2f}% • Durée : {duree} ans\nApport : {apport:.0f}€")

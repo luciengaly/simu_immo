@@ -1,3 +1,8 @@
+type: Appartement
+ville: Toulouse
+surface: 20
+dpe: A
+ges: A
 prix_bien: 100000
 frais_agence: 6
 frais_notaire: 8
@@ -9,3 +14,4 @@ duree_emprunt: 20
 loyer: 600
 charges: 1500
 aug_loyer: 0.0
+revente: 100000

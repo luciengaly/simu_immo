@@ -1,109 +1,103 @@
 import streamlit as st
 import yaml
-from utils import launch_simu
+from utils import launch_simu, display_params
 
 DEFAULT_PATH = "./src/default.yaml"
 
 st.title("🏠 Accueil")
 
 
+def update_session(dico):
+    for key, value in dico.items():
+        st.session_state[key] = value
+
+
 @st.cache_data
 def init_session():
     with open(DEFAULT_PATH, "r") as file:
         default = yaml.safe_load(file)
-    return default
+    update_session(default)
 
 
-default = init_session()
+init_session()
 
 # Formulaire de saisie
 with st.form("parametres"):
-    col1, col2, col3, col4, col5 = st.columns(5)
+    st.header("Informations générales")
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
+        type = st.selectbox("Type de bien", ["Appartement", "Maison"])
         st.header("Achat du bien")
         prix_bien = st.number_input(
-            "Prix d'achat du bien (€, net vendeur)",
-            key="prix_bien",
-            value=default["prix_bien"],
+            "Prix d'achat du bien (€, net vendeur)", value=st.session_state.prix_bien
         )
         frais_agence = st.number_input(
-            "Frais d'agence (%)",
-            key="frais_agence",
-            value=default["frais_agence"],
+            "Frais d'agence (%)", value=st.session_state.frais_agence
         )
         frais_notaire = st.number_input(
-            "Frais de notaire (%)",
-            key="frais_notaire",
-            value=default["frais_notaire"],
+            "Frais de notaire (%)", value=st.session_state.frais_notaire
         )
-        travaux = st.number_input(
-            "Montant travaux (€)", key="travaux", value=default["travaux"]
-        )
+        travaux = st.number_input("Montant travaux (€)", value=st.session_state.travaux)
         meubles = st.number_input(
-            "Montant ammeublement (€)", key="meubles", value=default["meubles"]
+            "Montant ammeublement (€)", value=st.session_state.meubles
         )
 
     with col2:
+        ville = st.text_input("Ville", value=st.session_state.ville)
         st.header("Financement")
-        apport = st.number_input(
-            "Apport personnel (€)", key="apport", value=default["apport"]
-        )
+        apport = st.number_input("Apport personnel (€)", value=st.session_state.apport)
         taux_emprunt = st.number_input(
-            "Taux d'emprunt (%, tout frais inclus)",
-            key="taux_emprunt",
-            value=default["taux_emprunt"],
+            "Taux d'emprunt (%, tout frais inclus)", value=st.session_state.taux_emprunt
         )
         duree_emprunt = st.slider(
-            "Durée de l'emprunt (années)",
-            5,
-            25,
-            key="duree_emprunt",
-            value=default["duree_emprunt"],
+            "Durée de l'emprunt (années)", 5, 25, value=st.session_state.duree_emprunt
         )
 
     with col3:
+        surface = st.number_input("Surface (m²)", value=st.session_state.surface)
         st.header("Location")
-        loyer = st.number_input(
-            "Loyer mensuel (€)", key="loyer", value=default["loyer"]
-        )
+        loyer = st.number_input("Loyer mensuel (€)", value=st.session_state.loyer)
         charges = st.number_input(
             "Charges annuelles (€, TF, FC, gestion, assurances PNO-GLI)",
-            key="charges",
-            value=default["charges"],
+            value=st.session_state.charges,
         )
         aug_loyer = st.number_input(
             "Augmentation annuelle loyer (%)",
-            key="aug_loyer",
-            value=default["aug_loyer"],
+            value=st.session_state.aug_loyer,
         )
 
     with col4:
-        st.header("Impôts")
-        st.write(
-            "Les impôts sont calculés sur la base du régime réel, sans prise en compte du micro-BIC."
-        )
-
-    with col5:
+        dpe = st.selectbox("DPE", ["A", "B", "C", "D", "E", "F", "G"])
         st.header("Revente")
+        revente = st.number_input(
+            "Prix de revente (€, > 100) ou Inflation fixe (%, < 100)",
+            value=st.session_state.revente,
+        )
+        st.text("Bientôt disponible")
 
     submitted = st.form_submit_button("Enregistrer les paramètres")
 
 # Si formulaire validé, on stocke dans la session
 if submitted:
-    st.session_state.simulation = launch_simu(
-        prix_bien,
-        frais_agence,
-        frais_notaire,
-        travaux,
-        meubles,
-        apport,
-        taux_emprunt,
-        duree_emprunt,
-        loyer,
-        charges,
-        aug_loyer,
-    )
+    params = {
+        "prix_bien": prix_bien,
+        "frais_agence": frais_agence,
+        "frais_notaire": frais_notaire,
+        "travaux": travaux,
+        "meubles": meubles,
+        "apport": apport,
+        "taux_emprunt": taux_emprunt,
+        "duree_emprunt": duree_emprunt,
+        "loyer": loyer,
+        "charges": charges,
+        "aug_loyer": aug_loyer,
+        "revente": revente,
+    }
+    update_session(params)
+    st.session_state.simulation = launch_simu(**params)
+
     st.success(
         "✅ Paramètres enregistrés ! Accédez aux onglets pour voir les résultats."
     )
+    st.write(st.session_state)
