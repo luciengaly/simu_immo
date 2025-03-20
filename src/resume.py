@@ -3,13 +3,14 @@ from utils import display_params
 
 
 st.title("📄 Résumé")
-display_params()
 
 # Récupération de la simulation depuis la session
 simulation = st.session_state.get("simulation")
 if not simulation:
     st.warning("⚠️ Veuillez d'abord définir les paramètres dans l'onglet 'Accueil'.")
     st.stop()
+
+display_params()
 
 cashflow = simulation.tableau_cashflow().loc[0, "Cashflow (€)"] / 12
 rendement_net = simulation.rendement_net()

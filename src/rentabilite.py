@@ -4,13 +4,14 @@ import plotly.express as px
 from utils import display_params
 
 st.title("📊 Rentabilité")
-display_params()
 
 # Récupération de la simulation depuis la session
 simulation = st.session_state.get("simulation")
 if not simulation:
     st.warning("⚠️ Veuillez d'abord définir les paramètres dans l'onglet 'Accueil'.")
     st.stop()
+
+display_params()
 
 # Calcul des indicateurs
 rendement_brut = simulation.rendement_brut()

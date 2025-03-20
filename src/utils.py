@@ -329,12 +329,12 @@ def display_params():
         # Colonne "Votre Bien"
         with col1:
             st.markdown("🏠 **VOTRE BIEN**")
-            montant_total = st.session_state.simulation.montant_total
+            cout_total = st.session_state.simulation.cout_total
             surface = st.session_state.surface
             travaux = "Avec travaux" if st.session_state.travaux > 0 else "Sans travaux"
             dpe = st.session_state.dpe
             st.text(
-                f"Appartement • Toulouse • {surface}m² • DPE {dpe}\n{montant_total:.0f}€ • {travaux}"
+                f"Appartement • Toulouse • {surface}m² • DPE {dpe}\n{cout_total:.0f}€ • {travaux}"
             )
 
         # Colonne "Location"

@@ -16,6 +16,7 @@ def update_session(dico):
 def init_session():
     with open(DEFAULT_PATH, "r") as file:
         default = yaml.safe_load(file)
+    st.session_state.simulation = None
     update_session(default)
 
 
@@ -100,4 +101,3 @@ if submitted:
     st.success(
         "✅ Paramètres enregistrés ! Accédez aux onglets pour voir les résultats."
     )
-    st.write(st.session_state)
