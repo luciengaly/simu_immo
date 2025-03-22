@@ -17,7 +17,6 @@ display_params()
 rendement_brut = simulation.rendement_brut()
 rendement_net = simulation.rendement_net()
 
-# Affichage des métriques (écriture en gros)
 col1, col2 = st.columns(2)
 
 with col1:
@@ -26,7 +25,7 @@ with col1:
 with col2:
     st.metric(label="Rendement Net", value=f"{rendement_net:.2f} %")
 
-df = simulation.tableau_cashflow()
+df = simulation.tableau_cashflow
 
 st.write("**Détail du cashflow annuel**")
 st.dataframe(df, hide_index=True)
@@ -34,7 +33,6 @@ st.dataframe(df, hide_index=True)
 fig = px.line(df, x="Année", y="Cashflow (€)", title="Évolution du Cashflow")
 st.plotly_chart(fig)
 
-df["Enrichissement cumulé (€)"] = df["Enrichissement (€)"].cumsum()
 fig = px.line(
     df,
     x="Année",

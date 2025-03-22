@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
+from numpy_financial import npv, irr
 import plotly.graph_objects as go
 import streamlit as st
+
+DUREE_SIMU = 30
 
 
 class Emprunt:
@@ -110,7 +113,7 @@ class Emprunt:
 
 
 class Location:
-    def __init__(self, loyer, charges, aug_loyer, duree=20):
+    def __init__(self, loyer, charges, aug_loyer, duree=30):
         self.loyer = loyer
         self.charges = charges
         self.aug_loyer = aug_loyer
@@ -130,21 +133,24 @@ class Location:
 
 class Amortissement:
     def __init__(
-        self, bien, travaux, meubles, duree_bien=20, duree_meubles=8, taux_usure=0.8
+        self,
+        bien,
+        travaux,
+        meubles,
+        duree_bien=25,
+        duree_meubles=8,
+        taux_usure=0.8,
+        duree=30,
     ):
+        self.duree = duree
         self.bien = [(bien + travaux) * taux_usure / duree_bien] * duree_bien
-        self.meubles = [meubles / duree_meubles] * duree_meubles
+        self.meubles = [meubles / duree_meubles] * duree_meubles + [0] * duree
         self.total = self.calcul_amort_total()
 
     def calcul_amort_total(self):
-        max_len = max(len(self.bien), len(self.meubles))
-        total = []
-
-        for i in range(max_len):
-            bien = self.bien[i] if i < len(self.bien) else 0
-            meubles = self.meubles[i] if i < len(self.meubles) else 0
-            total.append(bien + meubles)
-
+        bien = (self.bien + [0] * self.duree)[: self.duree]
+        meubles = (self.meubles + [0] * self.duree)[: self.duree]
+        total = [bien[i] + meubles[i] for i in range(self.duree)]
         return total
 
 
@@ -159,6 +165,7 @@ class Fiscalite:
         part_interet: list[float],
         revenus: list[float],
         charges: list[float],
+        duree: int = 30,
     ):
         self.prix_bien = prix_bien
         self.frais_agence = frais_agence
@@ -168,25 +175,33 @@ class Fiscalite:
         self.part_interet = part_interet
         self.revenus = revenus
         self.charges = charges
+        self.duree = duree
 
-        self.amortissement = Amortissement(prix_bien, travaux, meubles)
+        self.amortissement = Amortissement(
+            prix_bien, travaux, meubles, duree=self.duree
+        )
         self.deficit_reportable = 0
         self.tableau_impots = self.calcul_impots_regime_reel()
 
-    def calcul_impots_regime_reel(self, duree=20):
+    def calcul_impots_regime_reel(self):
+        revenus = (self.revenus + [0] * self.duree)[: self.duree]
+        charges = (self.charges + [0] * self.duree)[: self.duree]
+        part_interets = (self.part_interet + [0] * self.duree)[: self.duree]
+        amortissements = (self.amortissement.total + [0] * self.duree)[: self.duree]
+
         amortissement_reportable = 0
         data = []
 
-        for annee in range(1, duree + 1):
-            revenus = self.revenus[annee - 1]
-            amortissement = self.amortissement.total[annee - 1]
-            charges = self.charges[annee - 1] + self.part_interet[annee - 1]
+        for annee in range(1, self.duree + 1):
+            revenu = revenus[annee - 1]
+            charge = charges[annee - 1] + part_interets[annee - 1]
+            amortissement = amortissements[annee - 1]
 
             if annee == 1:
-                charges += self.prix_bien * (self.frais_notaire + self.frais_agence)
+                charge += self.prix_bien * (self.frais_notaire + self.frais_agence)
 
             # Calcul du résultat avant déficit reportable et amortissement
-            resultat = revenus - charges
+            resultat = revenu - charge
 
             # Gestion du déficit reportable
             if resultat < 0:
@@ -213,13 +228,13 @@ class Fiscalite:
 
                 montant_imposable_reel = max(0, resultat_fiscal)
 
-            montant_imposable_bic = revenus * 0.50
+            montant_imposable_bic = revenu * 0.50
 
             data.append(
                 [
                     annee,
-                    revenus,
-                    charges,
+                    revenu,
+                    charge,
                     resultat,
                     resultat_fiscal,
                     self.deficit_reportable,
@@ -253,15 +268,13 @@ class SimulationLMNP:
             setattr(self, key, value)
 
         self.convert_percent()
-        self.calcul_cout_total()
-        self.calcul_montant_emprunte()
+        self.cout_total = self.calcul_cout_total()
+        self.montant_emprunte = self.calcul_montant_emprunte()
 
         self.emprunt = Emprunt(
             self.montant_emprunte, self.duree_emprunt, self.taux_emprunt
         )
-        self.location = Location(
-            self.loyer, self.charges, self.aug_loyer, self.duree_emprunt
-        )
+        self.location = Location(self.loyer, self.charges, self.aug_loyer, DUREE_SIMU)
         self.fiscalite = Fiscalite(
             self.prix_bien,
             self.frais_agence,
@@ -271,13 +284,33 @@ class SimulationLMNP:
             self.emprunt.tableau_amort_annuel["Part intérêts (€)"].values.tolist(),
             self.location.bilan_annuel["Revenus (€)"].values.tolist(),
             self.location.bilan_annuel["Dépenses (€)"].values.tolist(),
+            DUREE_SIMU,
         )
 
+        self.tableau_cashflow = self.calcul_tableau_cashflow()
+        self.rendement_patrimonial = self.calcul_rendement_patrimonial(
+            taux_actualisation=0.08, duree=self.duree_emprunt
+        )
+
+    def calcul_revente_nette(self):
+        valeurs_revente = []
+
+        prix_net_vendeur = self.prix_bien + self.travaux + self.meubles
+
+        # Cas où self.revente est un pourcentage d'inflation
+        if self.revente < 100:
+            taux_inflation = self.revente / 100  # Conversion en taux
+            for annee in range(1, self.duree_emprunt + 1):
+                valeur_annuelle = prix_net_vendeur * ((1 + taux_inflation) ** annee)
+                valeurs_revente.append(round(valeur_annuelle, 0))
+
+        return valeurs_revente
+
     def calcul_montant_emprunte(self):
-        self.montant_emprunte = self.cout_total - self.apport
+        return self.cout_total - self.apport
 
     def calcul_cout_total(self):
-        self.cout_total = (
+        return (
             self.prix_bien * (1 + self.frais_agence + self.frais_notaire)
             + self.travaux
             + self.meubles
@@ -289,25 +322,31 @@ class SimulationLMNP:
         self.taux_emprunt /= 100
         self.aug_loyer /= 100
 
-    def tableau_cashflow(self, duree=20):
+    def calcul_tableau_cashflow(self, duree=30):
         revenus = self.location.bilan_annuel["Revenus (€)"].values.tolist()
         charges = self.location.bilan_annuel["Dépenses (€)"].values.tolist()
-        annuite = self.emprunt.annuite
         part_capital = self.emprunt.tableau_amort_annuel[
             "Part capital (€)"
         ].values.tolist()
+        annuites = self.emprunt.tableau_amort_annuel["Annuité (€)"].values.tolist()
+
+        revenus = (revenus + [0] * duree)[:duree]
+        charges = (charges + [0] * duree)[:duree]
+        annuites = (annuites + [0] * duree)[:duree]
+        part_capital = (part_capital + [0] * duree)[:duree]
 
         df = pd.DataFrame(
             {
                 "Année": range(1, duree + 1),
                 "Revenus (€)": revenus,
                 "Charges (€)": charges,
-                "Annuité (€)": [annuite] * duree,
+                "Annuité (€)": annuites,
                 "Part capital (€)": part_capital,
             }
         )
         df["Cashflow (€)"] = df["Revenus (€)"] - df["Charges (€)"] - df["Annuité (€)"]
         df["Enrichissement (€)"] = df["Part capital (€)"] + df["Cashflow (€)"]
+        df["Enrichissement cumulé (€)"] = df["Enrichissement (€)"].cumsum()
         return df
 
     def rendement_brut(self):
@@ -315,6 +354,56 @@ class SimulationLMNP:
 
     def rendement_net(self):
         return (self.loyer * 12 - self.charges) / self.cout_total * 100
+
+    def calcul_van(self, taux_actualisation=0.005, duree=20):
+        cashflows = self.tableau_cashflow["Cashflow (€)"].values.tolist()
+        valeurs_revente = self.calcul_revente_nette()
+
+        van_list = []
+
+        for annee in range(1, duree + 1):
+            flux_actualises = cashflows[:annee]
+            # print(flux_actualises)
+            flux_actualises[-1] += valeurs_revente[annee - 1]
+            # print(flux_actualises)
+            van = npv(taux_actualisation, [-self.montant_emprunte] + flux_actualises)
+            # print([-self.montant_emprunte] + flux_actualises)
+            van_list.append(van)
+
+        return van_list
+
+    def calcul_tri(self, duree=20):
+        cashflows = self.tableau_cashflow["Cashflow (€)"].values.tolist()
+        valeurs_revente = self.calcul_revente_nette()
+
+        tri_list = []
+
+        for annee in range(1, duree + 1):
+            flux_actualises = cashflows[:annee]
+            flux_actualises[-1] += valeurs_revente[annee - 1]
+            tri = (
+                irr([-self.montant_emprunte] + flux_actualises) * 100
+            )  # Conversion en %
+            tri_list.append(tri)
+
+        return tri_list
+
+    def calcul_rendement_patrimonial(self, taux_actualisation=0.005, duree=20):
+        annees = list(range(1, duree + 1))
+        valeurs_revente = self.calcul_revente_nette()
+        van_list = self.calcul_van(taux_actualisation, duree)
+        tri_list = self.calcul_tri(duree)
+
+        df = pd.DataFrame(
+            {
+                "Année": annees,
+                "Prix de Revente Net (€)": valeurs_revente[:duree],
+                "VAN (€)": van_list,
+                "TRI (%)": tri_list,
+            }
+        )
+
+        return df
 
 
 @st.cache_data

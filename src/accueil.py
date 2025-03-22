@@ -2,7 +2,7 @@ import streamlit as st
 import yaml
 from utils import launch_simu, display_params
 
-DEFAULT_PATH = "./src/default.yaml"
+DEFAULT_PATH = "./default.yaml"
 
 st.title("🏠 Accueil")
 
@@ -52,7 +52,11 @@ with st.form("parametres"):
             "Taux d'emprunt (%, tout frais inclus)", value=st.session_state.taux_emprunt
         )
         duree_emprunt = st.slider(
-            "Durée de l'emprunt (années)", 5, 25, value=st.session_state.duree_emprunt
+            "Durée de l'emprunt (années)",
+            min_value=5,
+            max_value=25,
+            step=5,
+            value=st.session_state.duree_emprunt,
         )
 
     with col3:
@@ -82,6 +86,10 @@ with st.form("parametres"):
 # Si formulaire validé, on stocke dans la session
 if submitted:
     params = {
+        "type": type,
+        "ville": ville,
+        "surface": surface,
+        "dpe": dpe,
         "prix_bien": prix_bien,
         "frais_agence": frais_agence,
         "frais_notaire": frais_notaire,

@@ -12,4 +12,6 @@ if not simulation:
 
 display_params()
 
-st.write("Simulation de la revente et valorisation future.")
+# df = simulation.rendement_patrimonial
+
+# st.dataframe(df, hide_index=True)

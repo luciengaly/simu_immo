@@ -12,7 +12,7 @@ if not simulation:
 
 display_params()
 
-cashflow = simulation.tableau_cashflow().loc[0, "Cashflow (€)"] / 12
+cashflow = simulation.tableau_cashflow.loc[0, "Cashflow (€)"] / 12
 rendement_net = simulation.rendement_net()
 enrichissement = "TODO"
 rendement_patrimobial = "TODO"
