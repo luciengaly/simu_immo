@@ -12,7 +12,6 @@ def update_session(dico):
         st.session_state[key] = value
 
 
-@st.cache_data
 def init_session():
     with open(DEFAULT_PATH, "r") as file:
         default = yaml.safe_load(file)
