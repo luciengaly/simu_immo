@@ -12,6 +12,9 @@ if not simulation:
 
 display_params()
 
-# df = simulation.rendement_patrimonial
+col1, col2 = st.columns(2)
+with col1:
+    st.metric(label="VAN", value=f"{simulation.van:.0f} €")
 
-# st.dataframe(df, hide_index=True)
+with col2:
+    st.metric(label="TRI", value=f"{simulation.tri:.2f} %")

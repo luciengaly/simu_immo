@@ -288,23 +288,20 @@ class SimulationLMNP:
         )
 
         self.tableau_cashflow = self.calcul_tableau_cashflow()
-        self.rendement_patrimonial = self.calcul_rendement_patrimonial(
-            taux_actualisation=0.08, duree=self.duree_emprunt
-        )
+        self.calcul_metrics_revente(taux_van=0.05, duree=10)
 
-    def calcul_revente_nette(self):
-        valeurs_revente = []
-
+    def calcul_revente_nette(self, duree=10):
         prix_net_vendeur = self.prix_bien + self.travaux + self.meubles
+        valeurs_revente = []
 
         # Cas où self.revente est un pourcentage d'inflation
         if self.revente < 100:
             taux_inflation = self.revente / 100  # Conversion en taux
-            for annee in range(1, self.duree_emprunt + 1):
+            for annee in range(1, duree + 1):
                 valeur_annuelle = prix_net_vendeur * ((1 + taux_inflation) ** annee)
                 valeurs_revente.append(round(valeur_annuelle, 0))
 
-        return valeurs_revente
+        return valeurs_revente[-1]
 
     def calcul_montant_emprunte(self):
         return self.cout_total - self.apport
@@ -355,55 +352,32 @@ class SimulationLMNP:
     def rendement_net(self):
         return (self.loyer * 12 - self.charges) / self.cout_total * 100
 
-    def calcul_van(self, taux_actualisation=0.005, duree=20):
+    def calcul_van(self, flux_actualises, taux_actualisation=0.005):
+        return npv(taux_actualisation, flux_actualises)
+
+    def calcul_tri(self, flux_actualises):
+        return irr(flux_actualises) * 100
+
+    def calcul_flux_actualises(
+        self, cashflows: list, valeurs_revente: float, crd: float, duree=10
+    ):
+        flux_actualises = cashflows[:duree]
+        flux_actualises[0] += -self.apport
+        flux_actualises[-1] += valeurs_revente - crd
+        return flux_actualises
+
+    def calcul_metrics_revente(self, taux_van=0.005, duree=10):
+        valeurs_revente = self.calcul_revente_nette(duree)
         cashflows = self.tableau_cashflow["Cashflow (€)"].values.tolist()
-        valeurs_revente = self.calcul_revente_nette()
-
-        van_list = []
-
-        for annee in range(1, duree + 1):
-            flux_actualises = cashflows[:annee]
-            # print(flux_actualises)
-            flux_actualises[-1] += valeurs_revente[annee - 1]
-            # print(flux_actualises)
-            van = npv(taux_actualisation, [-self.montant_emprunte] + flux_actualises)
-            # print([-self.montant_emprunte] + flux_actualises)
-            van_list.append(van)
-
-        return van_list
-
-    def calcul_tri(self, duree=20):
-        cashflows = self.tableau_cashflow["Cashflow (€)"].values.tolist()
-        valeurs_revente = self.calcul_revente_nette()
-
-        tri_list = []
-
-        for annee in range(1, duree + 1):
-            flux_actualises = cashflows[:annee]
-            flux_actualises[-1] += valeurs_revente[annee - 1]
-            tri = (
-                irr([-self.montant_emprunte] + flux_actualises) * 100
-            )  # Conversion en %
-            tri_list.append(tri)
-
-        return tri_list
-
-    def calcul_rendement_patrimonial(self, taux_actualisation=0.005, duree=20):
-        annees = list(range(1, duree + 1))
-        valeurs_revente = self.calcul_revente_nette()
-        van_list = self.calcul_van(taux_actualisation, duree)
-        tri_list = self.calcul_tri(duree)
-
-        df = pd.DataFrame(
-            {
-                "Année": annees,
-                "Prix de Revente Net (€)": valeurs_revente[:duree],
-                "VAN (€)": van_list,
-                "TRI (%)": tri_list,
-            }
+        crd = self.emprunt.tableau_amort_annuel[
+            "Capital restant dû (€)"
+        ].values.tolist()[duree - 1]
+        flux_actualises = self.calcul_flux_actualises(
+            cashflows, valeurs_revente, crd, duree
         )
-
-        return df
+        self.van = self.calcul_van(flux_actualises, taux_actualisation=taux_van)
+        self.tri = self.calcul_tri(flux_actualises)
+        self.enrichissement = sum(flux_actualises)
 
 
 @st.cache_data

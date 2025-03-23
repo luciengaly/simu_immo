@@ -14,8 +14,8 @@ display_params()
 
 cashflow = simulation.tableau_cashflow.loc[0, "Cashflow (€)"] / 12
 rendement_net = simulation.rendement_net()
-enrichissement = "TODO"
-rendement_patrimobial = "TODO"
+enrichissement = simulation.enrichissement
+tri = simulation.tri
 
 st.markdown("---")  # Ligne de séparation esthétique
 col1, col2, col3, col4 = st.columns(4)
@@ -27,9 +27,9 @@ with col2:
     st.metric(label="📈 Rendement Net", value=f"{rendement_net:.2f} %")
 
 with col3:
-    st.metric(label="🏦 Enrichissement", value=enrichissement)
+    st.metric(label="🏦 Enrichissement (10 ans)", value=f"{enrichissement:.0f} €")
 
 with col4:
-    st.metric(label="📊 Rendement Patrimonial", value=rendement_patrimobial)
+    st.metric(label="📊 TRI (10 ans)", value=f"{tri:.2f} %")
 
 st.markdown("---")  # Ligne de séparation esthétique
