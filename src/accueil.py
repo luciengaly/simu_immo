@@ -19,7 +19,8 @@ def init_session():
     update_session(default)
 
 
-init_session()
+if "prix_bien" not in st.session_state:
+    init_session()
 
 # Formulaire de saisie
 with st.form("parametres"):
