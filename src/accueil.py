@@ -1,6 +1,6 @@
 import streamlit as st
 import yaml
-from utils import launch_simu, display_params
+from utils import launch_simu
 
 DEFAULT_PATH = "./default.yaml"
 
@@ -109,3 +109,4 @@ if submitted:
     st.success(
         "✅ Paramètres enregistrés ! Accédez aux onglets pour voir les résultats."
     )
+    st.switch_page("resume.py")

@@ -27,9 +27,12 @@ with col2:
     st.metric(label="📈 Rendement Net", value=f"{rendement_net:.2f} %")
 
 with col3:
-    st.metric(label="🏦 Enrichissement (10 ans)", value=f"{enrichissement:.0f} €")
+    st.metric(
+        label="🏦 Enrichissement (10 ans, avant impôts)",
+        value=f"{enrichissement:.0f} €",
+    )
 
 with col4:
-    st.metric(label="📊 TRI (10 ans)", value=f"{tri:.2f} %")
+    st.metric(label="📊 TRI (10 ans, avant impôts)", value=f"{tri:.2f} %")
 
 st.markdown("---")  # Ligne de séparation esthétique
