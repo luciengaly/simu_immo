@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from numpy_financial import npv, irr
 import plotly.graph_objects as go
+import plotly.express as px
 import streamlit as st
 
 DUREE_SIMU = 30
@@ -187,7 +188,9 @@ class Fiscalite:
         revenus = (self.revenus + [0] * self.duree)[: self.duree]
         charges = (self.charges + [0] * self.duree)[: self.duree]
         part_interets = (self.part_interet + [0] * self.duree)[: self.duree]
-        amortissements = (self.amortissement.total + [0] * self.duree)[: self.duree]
+        self.amortissements = (self.amortissement.total + [0] * self.duree)[
+            : self.duree
+        ]
 
         amortissement_reportable = 0
         data = []
@@ -195,7 +198,7 @@ class Fiscalite:
         for annee in range(1, self.duree + 1):
             revenu = revenus[annee - 1]
             charge = charges[annee - 1] + part_interets[annee - 1]
-            amortissement = amortissements[annee - 1]
+            amortissement = self.amortissements[annee - 1]
 
             if annee == 1:
                 charge += self.prix_bien * (self.frais_notaire + self.frais_agence)
@@ -260,6 +263,36 @@ class Fiscalite:
                 "Montant imposable régime micro-BIC (€)",
             ],
         )
+
+    def graphique_impots(self):
+        fig = px.line(
+            self.tableau_impots,
+            x="Année",
+            y=[
+                "Résultat (€)",
+                "Déficit reportable (€)",
+                "Amortissement reportable (€)",
+            ],
+            title="Optimisation fiscale de la revente",
+        )
+
+        # Identifier la dernière année où "Amortissement reportable (€)" augmente linéairement
+        amortissement_reportable = self.tableau_impots["Amortissement reportable (€)"]
+        differences = amortissement_reportable.diff() - self.amortissements
+        last_linear_increase_year = (
+            self.tableau_impots.loc[differences < 0].iloc[0]["Année"] - 1
+        )
+
+        # Ajouter une barre verticale
+        fig.add_vline(
+            x=last_linear_increase_year,
+            line_dash="dash",
+            line_color="blue",
+            annotation_text=f"Revenve Année {last_linear_increase_year:.0f}",
+            annotation_position="top left",
+        )
+
+        return fig
 
 
 class SimulationLMNP:
@@ -352,7 +385,7 @@ class SimulationLMNP:
     def rendement_net(self):
         return (self.loyer * 12 - self.charges) / self.cout_total * 100
 
-    def calcul_van(self, flux_actualises, taux_actualisation=0.005):
+    def calcul_van(self, flux_actualises, taux_actualisation=0.05):
         return npv(taux_actualisation, flux_actualises)
 
     def calcul_tri(self, flux_actualises):
@@ -366,7 +399,7 @@ class SimulationLMNP:
         flux_actualises[-1] += valeurs_revente - crd
         return flux_actualises
 
-    def calcul_metrics_revente(self, taux_van=0.005, duree=10):
+    def calcul_metrics_revente(self, taux_van=0.05, duree=10):
         valeurs_revente = self.calcul_revente_nette(duree)
         cashflows = self.tableau_cashflow["Cashflow (€)"].values.tolist()
         crd = self.emprunt.tableau_amort_annuel[

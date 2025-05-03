@@ -18,3 +18,6 @@ with col1:
 
 with col2:
     st.metric(label="TRI (10 ans, avant impôts)", value=f"{simulation.tri:.2f} %")
+
+fig = simulation.fiscalite.graphique_impots()
+st.plotly_chart(fig)
