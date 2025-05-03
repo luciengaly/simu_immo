@@ -274,20 +274,16 @@ class Fiscalite:
                 "Amortissement reportable (€)",
             ],
             title="Optimisation fiscale de la revente",
+            markers=True,
         )
+        last_linear_increase_year = self.tableau_impots.loc[
+            self.tableau_impots["Déficit reportable (€)"] == 0
+        ].iloc[0]["Année"]
 
-        # Identifier la dernière année où "Amortissement reportable (€)" augmente linéairement
-        amortissement_reportable = self.tableau_impots["Amortissement reportable (€)"]
-        differences = amortissement_reportable.diff() - self.amortissements
-        last_linear_increase_year = (
-            self.tableau_impots.loc[differences < 0].iloc[0]["Année"] - 1
-        )
-
-        # Ajouter une barre verticale
         fig.add_vline(
             x=last_linear_increase_year,
             line_dash="dash",
-            line_color="blue",
+            line_color="red",
             annotation_text=f"Revenve Année {last_linear_increase_year:.0f}",
             annotation_position="top left",
         )
@@ -333,8 +329,9 @@ class SimulationLMNP:
             for annee in range(1, duree + 1):
                 valeur_annuelle = prix_net_vendeur * ((1 + taux_inflation) ** annee)
                 valeurs_revente.append(round(valeur_annuelle, 0))
-
-        return valeurs_revente[-1]
+            return valeurs_revente[-1]
+        else:
+            return self.revente
 
     def calcul_montant_emprunte(self):
         return self.cout_total - self.apport
@@ -429,8 +426,9 @@ def display_params():
             surface = st.session_state.surface
             travaux = "Avec travaux" if st.session_state.travaux > 0 else "Sans travaux"
             dpe = st.session_state.dpe
+            vf_m2 = st.session_state.simulation.prix_bien / surface
             st.text(
-                f"Appartement • Toulouse • {surface}m² • DPE {dpe}\n{cout_total:.0f}€ • {travaux}"
+                f"Appartement • Toulouse • {surface} m² • DPE {dpe}\n{cout_total:.0f} € • {travaux} • {vf_m2:.0f} €/m²"
             )
 
         # Colonne "Location"
@@ -439,7 +437,7 @@ def display_params():
             charges_annuelles = st.session_state.simulation.charges
             st.markdown("💰 **LOCATION**")
             st.text(
-                f"Loyer : {loyer_annuel:.0f}€/an\nCharges : {charges_annuelles:.0f}€/an"
+                f"Loyer : {loyer_annuel:.0f} €/an\nCharges : {charges_annuelles:.0f} €/an"
             )
 
         # Colonne "Crédit"
@@ -448,4 +446,6 @@ def display_params():
             taux = st.session_state.taux_emprunt
             duree = st.session_state.duree_emprunt
             st.markdown("🏦 **CRÉDIT**")
-            st.text(f"Taux : {taux:.2f}% • Durée : {duree} ans\nApport : {apport:.0f}€")
+            st.text(
+                f"Taux : {taux:.2f} % • Durée : {duree} ans\nApport : {apport:.0f} €"
+            )

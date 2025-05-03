@@ -30,7 +30,9 @@ df = simulation.tableau_cashflow
 st.write("**Détail du cashflow annuel**")
 st.dataframe(df, hide_index=True)
 
-fig = px.line(df, x="Année", y="Cashflow (€)", title="Évolution du Cashflow")
+fig = px.line(
+    df, x="Année", y="Cashflow (€)", title="Évolution du Cashflow", markers=True
+)
 st.plotly_chart(fig)
 
 fig = px.line(
@@ -38,5 +40,6 @@ fig = px.line(
     x="Année",
     y="Enrichissement cumulé (€)",
     title="Évolution de l'enrichissement cumulé",
+    markers=True,
 )
 st.plotly_chart(fig)

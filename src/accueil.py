@@ -79,7 +79,6 @@ with st.form("parametres"):
             "Prix de revente (€, > 100) ou Inflation fixe (%, < 100)",
             value=st.session_state.revente,
         )
-        st.text("Bientôt disponible")
 
     submitted = st.form_submit_button("Enregistrer les paramètres")
 
