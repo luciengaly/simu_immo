@@ -10,27 +10,34 @@ st.title("📄 Résumé")
 result = require_simulation()
 display_params(result)
 
-monthly_cashflow = result.cashflow.loc[0, "Cashflow (€)"] / 12
+start_month = result.params.start_month
+cashflow_year_idx = 1 if start_month > 1 else 0
+cashflow_year_label = cashflow_year_idx + 1
+monthly_cashflow = result.cashflow.loc[cashflow_year_idx, "Cashflow (€)"] / 12
 net_yield = result.net_yield()
+horizon = result.params.resale_horizon
 
 st.markdown("---")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric(label="💰 Cashflow /mois", value=f"{monthly_cashflow:.0f} €")
+    st.metric(
+        label=f"💰 Cashflow /mois (année {cashflow_year_label})",
+        value=f"{monthly_cashflow:.0f} €",
+    )
 
 with col2:
     st.metric(label="📈 Rendement Net", value=f"{net_yield:.2f} %")
 
 with col3:
     st.metric(
-        label="🏦 Enrichissement (10 ans, avant impôts)",
+        label=f"🏦 Enrichissement ({horizon} ans, avant impôts)",
         value=f"{result.wealth_growth:.0f} €",
     )
 
 with col4:
     st.metric(
-        label="📊 TRI (10 ans, avant impôts)",
+        label=f"📊 TRI ({horizon} ans, avant impôts)",
         value=f"{result.irr_value:.2f} %",
     )
 

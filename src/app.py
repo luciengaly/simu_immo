@@ -3,12 +3,12 @@
 import streamlit as st
 
 
-home_pg = st.Page("pages/home.py", title="Accueil")
-summary_pg = st.Page("pages/summary.py", title="Résumé")
-profitability_pg = st.Page("pages/profitability.py", title="Rentabilité")
-loan_pg = st.Page("pages/loan.py", title="Emprunt")
-taxes_pg = st.Page("pages/taxes.py", title="Impôts")
-resale_pg = st.Page("pages/resale.py", title="Revente")
+home_pg = st.Page("views/home.py", title="Accueil")
+summary_pg = st.Page("views/summary.py", title="Résumé")
+profitability_pg = st.Page("views/profitability.py", title="Rentabilité")
+loan_pg = st.Page("views/loan.py", title="Emprunt")
+taxes_pg = st.Page("views/taxes.py", title="Impôts")
+resale_pg = st.Page("views/resale.py", title="Revente")
 
 pg = st.navigation(
     [home_pg, summary_pg, profitability_pg, loan_pg, taxes_pg, resale_pg]

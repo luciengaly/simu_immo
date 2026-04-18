@@ -35,13 +35,13 @@ def display_params(result: SimulationResult) -> None:
             st.markdown("💰 **LOCATION**")
             st.text(
                 f"Loyer : {annual_rent:.0f} €/an\n"
-                f"Charges : {params.annual_expenses:.0f} €/an"
+                f"Charges : {result.resolved_annual_expenses:.0f} €/an"
             )
 
         with col3:
             st.markdown("🏦 **CRÉDIT**")
             st.text(
-                f"Taux : {params.loan_rate:.2f} %"
+                f"Taux : {result.effective_loan_rate:.2f} %"
                 f" • Durée : {params.loan_duration} ans\n"
                 f"Apport : {params.down_payment:.0f} €"
             )

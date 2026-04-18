@@ -94,16 +94,31 @@ class Loan:
             )
         return entries
 
-    def annual_schedule(self) -> list[AmortizationEntry]:
+    def annual_schedule(self, start_month: int = 1) -> list[AmortizationEntry]:
         """Génère le tableau d'amortissement annuel agrégé.
 
+        Si ``start_month`` est supérieur à 1, la première année ne contient
+        que ``13 - start_month`` mensualités. Les années suivantes en
+        contiennent 12, jusqu'à épuisement des mensualités du prêt.
+
+        Args:
+            start_month: Mois de démarrage de l'activité (1 = janvier,
+                12 = décembre). Détermine le nombre de mensualités
+                affectées à la première année calendaire.
+
         Returns:
-            Liste des lignes d'amortissement, une par année.
+            Liste des lignes d'amortissement, une par année calendaire.
         """
         monthly = self.monthly_schedule()
         annual: list[AmortizationEntry] = []
-        for year in range(1, self.duration_years + 1):
-            window = monthly[(year - 1) * 12 : year * 12]
+        first_year_months = 13 - start_month
+        idx = 0
+        year = 1
+        while idx < len(monthly):
+            months_in_year = first_year_months if year == 1 else 12
+            window = monthly[idx : idx + months_in_year]
+            if not window:
+                break
             annual.append(
                 AmortizationEntry(
                     period=year,
@@ -113,4 +128,6 @@ class Loan:
                     remaining_balance=window[-1].remaining_balance,
                 )
             )
+            idx += months_in_year
+            year += 1
         return annual

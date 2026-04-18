@@ -11,15 +11,16 @@ st.title("🏷️ Revente")
 result = require_simulation()
 display_params(result)
 
+horizon = result.params.resale_horizon
 col1, col2 = st.columns(2)
 with col1:
     st.metric(
-        label="VAN (10 ans, avant impôts)",
+        label=f"VAN ({horizon} ans, avant impôts)",
         value=f"{result.npv_value:.0f} €",
     )
 with col2:
     st.metric(
-        label="TRI (10 ans, avant impôts)",
+        label=f"TRI ({horizon} ans, avant impôts)",
         value=f"{result.irr_value:.2f} %",
     )
 
