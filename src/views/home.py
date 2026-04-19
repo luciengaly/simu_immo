@@ -132,6 +132,11 @@ with st.form("parameters"):
             "Frais d'acte notaire (% si < 100, sinon €)",
             value=st.session_state.notary_fee_rate,
         )
+        broker_fee = st.number_input(
+            "Frais de courtage (€, optionnel)",
+            value=float(st.session_state.get("broker_fee", 0.0)),
+            min_value=0.0,
+        )
         renovation_cost = st.number_input(
             "Montant travaux (€)", value=st.session_state.renovation_cost
         )
@@ -269,6 +274,7 @@ if submitted:
         property_price=property_price,
         agency_fee_rate=agency_fee_rate,
         notary_fee_rate=notary_fee_rate,
+        broker_fee=broker_fee,
         renovation_cost=renovation_cost,
         furniture_cost=furniture_cost,
         down_payment=down_payment,

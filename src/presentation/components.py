@@ -19,9 +19,16 @@ def display_params(result: SimulationResult) -> None:
 
         with col1:
             st.markdown("🏠 **VOTRE BIEN**")
-            renovation_label = (
-                "Avec travaux" if params.renovation_cost > 0 else "Sans travaux"
-            )
+            has_renovation = params.renovation_cost > 0
+            has_furniture = params.furniture_cost > 0
+            if has_renovation and has_furniture:
+                renovation_label = "Avec travaux & ameublement"
+            elif has_renovation:
+                renovation_label = "Avec travaux"
+            elif has_furniture:
+                renovation_label = "Avec ameublement"
+            else:
+                renovation_label = "Sans travaux ni ameublement"
             price_per_m2 = params.property_price / params.surface
             st.text(
                 f"{params.property_type} • {params.city} • {params.surface:.0f} m²"

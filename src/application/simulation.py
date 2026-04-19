@@ -133,17 +133,20 @@ class LMNPSimulation:
         )
         rental_flows = rental.projected_flows(self._duration, params.start_month)
 
+        total_acquisition_fees = agency_fee + notary_fee + params.broker_fee
+        amortise_fees = params.acquisition_fees_treatment == "amortissement"
+
         depreciation = Depreciation(
             property_value=params.property_price,
-            renovation_cost=params.renovation_cost,
             furniture_cost=params.furniture_cost,
+            acquisition_fees=total_acquisition_fees if amortise_fees else 0.0,
         )
-        depreciation_schedule = depreciation.annual_schedule(self._duration)
+        depreciation_schedule = depreciation.annual_schedule(
+            self._duration, params.start_month
+        )
 
         taxation = Taxation(
-            property_value=params.property_price,
-            agency_fee_rate=agency_fee / params.property_price,
-            notary_fee_rate=notary_fee / params.property_price,
+            acquisition_fees_deductible=0.0 if amortise_fees else total_acquisition_fees,
         )
         loan_interests = self._pad_to_duration(
             [e.interest for e in annual_schedule]
@@ -276,6 +279,7 @@ class LMNPSimulation:
             + notary_fee
             + params.renovation_cost
             + params.furniture_cost
+            + params.broker_fee
             + params.guarantee_fee
             + params.dossier_fee
         )
