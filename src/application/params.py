@@ -34,6 +34,7 @@ class SimulationParams:
         annual_expenses: Charges annuelles (€).
         rent_increase_rate: Augmentation annuelle du loyer (%).
         resale: Prix de revente (€) si > 100, sinon taux d'inflation annuel (%).
+        broker_fee: Frais de courtage (€, 0 si absent).
         guarantee_fee: Frais de garantie du prêt (€, 0 si absent).
         dossier_fee: Frais de dossier bancaire (€, 0 si absent).
         pno_insurance: Assurance PNO (€, 0 si mode global).
@@ -71,6 +72,7 @@ class SimulationParams:
     # Champs optionnels (valeur 0 = absent / mode global actif)
     loan_nominal_rate: float = 0.0
     loan_insurance_rate: float = 0.0
+    broker_fee: float = 0.0
     guarantee_fee: float = 0.0
     dossier_fee: float = 0.0
     pno_insurance: float = 0.0
@@ -88,3 +90,4 @@ class SimulationParams:
     death_insurance_monthly: float = 0.0
     resale_horizon: int = 10
     start_month: int = 1
+    acquisition_fees_treatment: str = "deduction"

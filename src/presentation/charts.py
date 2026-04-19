@@ -63,7 +63,7 @@ def build_taxation_chart(entries: list[TaxationEntry]) -> go.Figure:
         [
             {
                 "Année": e.year,
-                "Résultat (€)": e.result,
+                "Résultat avant amort. (€)": e.result_before_amort,
                 "Déficit reportable (€)": e.carry_forward_deficit,
                 "Amortissement reportable (€)": e.carry_forward_depreciation,
             }
@@ -74,7 +74,7 @@ def build_taxation_chart(entries: list[TaxationEntry]) -> go.Figure:
         df,
         x="Année",
         y=[
-            "Résultat (€)",
+            "Résultat avant amort. (€)",
             "Déficit reportable (€)",
             "Amortissement reportable (€)",
         ],
