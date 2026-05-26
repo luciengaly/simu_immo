@@ -74,6 +74,32 @@ class SimulationResult:
             * 100
         )
 
+    def effective_taeg(self) -> float:
+        """TAEG effectif du prêt (%).
+
+        Si le TAEG a été saisi directement par l'utilisateur
+        (``loan_nominal_rate == 0``), il est retourné tel quel.
+
+        Sinon, le TAEG est reconstitué par calcul actuariel (IRR) sur la
+        série de flux mensuels : capital net reçu en année 0 (montant
+        emprunté diminué des frais de dossier et de garantie) puis
+        mensualités payées (intégrant déjà l'assurance via le taux
+        effectif). Les frais de courtier sont exclus du TAEG.
+
+        Returns:
+            TAEG annuel en pourcentage.
+        """
+        if self.params.loan_nominal_rate == 0:
+            return self.params.loan_rate
+        net_received = (
+            self.loan_amount
+            - self.params.guarantee_fee
+            - self.params.dossier_fee
+        )
+        monthly_payment = self.loan_monthly_schedule[0].payment
+        flows = [net_received] + [-monthly_payment] * len(self.loan_monthly_schedule)
+        return float(irr(flows)) * 12 * 100
+
 
 class LMNPSimulation:
     """Orchestrateur d'une simulation LMNP complète."""
