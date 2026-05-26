@@ -80,7 +80,7 @@ def _expense_row(
     return amount, period
 
 
-st.title("🏠 Accueil")
+st.title("📝 Paramètres")
 
 if "property_price" not in st.session_state:
     _init_session()
